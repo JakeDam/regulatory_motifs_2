@@ -95,7 +95,7 @@ def generate_matrix(motifs):
     return profile
 
 # Generates most probable k-mer motifs from a group of DNA sequences using a given motif profile
-def genrate_motifs(profile, dna, k):
+def generate_motifs(profile, dna, k):
     motifs = []
     for seq in dna:
         motifs.append(prof_most_prob(seq, k, profile))
@@ -111,3 +111,12 @@ def randomized_motif_search(dna, k, t):
         rand = random[j]
         seq = dna[j]
         motifs.append(seq[rand:rand + k])
+    best_score = score(motifs)
+    while True:
+        profile = generate_matrix(motifs)
+        motif_group = generate_motifs(profile, dna, k)
+        score = score(motif_group)
+        if score < best_score:
+            best_score = score
+        else:
+            return best_score
