@@ -32,13 +32,13 @@ def consensus_string(motifs):
             consensus += "T"
     return consensus
 
-# Scores a motif based on closeness to consensus string of motif matrix
+# Calculates the score of a motif matrix
 def score(motifs):
-  consensus = consensus_string(motifs)
-  score = 0
-  for motif in motifs:
-    score += hamming_dist(consensus, motif)
-  return score
+    score = 0
+    for i in range(len(motifs[0])):
+        motif = ''.join([motifs[j][i] for j in range(len(motifs))])
+        score += min([hamming_dist(motif, seq*len(motif)) for seq in 'ACGT'])
+    return score
 
 # Computes the probablity of a given k-mer from a profile matrix of k-mers
 def probability(text, matrix):
@@ -55,19 +55,19 @@ def probability(text, matrix):
     return prob
 
 # Determines the profile most probable k-mer from a given DNA sequence and profile matrix 
-def prof_most_prob(text, k, prof):
-    most_prob = 0
-    most_prob_kmer = ''
-    for i in range(0, len(text) - k + 1):
-        k_mer = text[i:i + k]
-        prob = probability(k_mer, prof)
-        if prob > most_prob:
-            most_prob = prob
-            most_prob_kmer = k_mer
-    if most_prob_kmer == '':
-        return text[0:k]
+def prof_most_prob(dna, k, prof):
+    nuc_indices = {'A': 0, 'T': 0, 'C': 0, 'G': 0}
+    max_prob = [-1, None]
+    for i in range(len(dna)-k+1):
+        current_prob = 0
+        for j, nucleotide in enumerate(dna[i:i+k]):
+            current_prob *= prof[j][nuc_indices[nucleotide]]
+        if current_prob > max_prob[0]:
+            max_prob = [current_prob, dna[i:i+k]]
+    if max_prob[1] == 0:
+        return dna[0][:k]
     else:
-        return most_prob_kmer
+	    return max_prob[1]
 
 # Generates a profile matrix from a group of motifs
 def generate_matrix(motifs):
@@ -96,27 +96,28 @@ def generate_matrix(motifs):
 
 # Generates most probable k-mer motifs from a group of DNA sequences using a given motif profile
 def generate_motifs(profile, dna, k):
-    motifs = []
-    for seq in dna:
-        motifs.append(prof_most_prob(seq, k, profile))
-    return motifs
+    return [prof_most_prob(seq,k,profile) for seq in dna]
 
 # Randomly generates motifs with continuously improving scores until motifs with the best score is reached
 def randomized_motif_search(dna, k, t):
-    random = []
-    motifs = []
-    for i in range(0, t):
-        random.append(randint(0, len(dna[0]) - k))
-    for j in range(0, t):
-        rand = random[j]
-        seq = dna[j]
-        motifs.append(seq[rand:rand + k])
-    best_score = score(motifs)
+    random = [randint(0,len(dna[0])-k) for a in range(t)]
+    motifs = [dna[i][j:j+k] for i,j in enumerate(random)]
+    best_score = [score(motifs), motifs]
     while True:
         profile = generate_matrix(motifs)
         motif_group = generate_motifs(profile, dna, k)
-        score = score(motif_group)
-        if score < best_score:
-            best_score = score
+        new_score = score(motif_group)
+        if new_score < best_score[0]:
+            best_score = [new_score, motif_group]
         else:
             return best_score
+
+seqs = [
+    'CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA',
+    'GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG',
+    'TAGTACCGAGACCGAAAGAAGTATACAGGCGT',
+    'TAGATCAAGTTTCAGGTGCACGTCGGTGAACC',
+    'AATCCACCAGCTCCACGTGCAATGTTGGCCTA'
+]
+
+print(randomized_motif_search(seqs, 8, 5))
