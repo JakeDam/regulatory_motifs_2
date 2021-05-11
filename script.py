@@ -45,18 +45,33 @@ def generate_motifs(profile, dna, k):
 def randomized_motif_search(dna, k, t):
     random = [randint(0,len(dna[0])-k) for a in range(t)]
     motifs = [dna[i][j:j+k] for i,j in enumerate(random)]
-    best_score = [score(motifs), motifs[:]]
+    best_score = [score(motifs), motifs]
     while True:
         profile = prof_with_pseudocounts(motifs)
         motif_group = generate_motifs(profile, dna, k)
         new_score = score(motif_group)
         if new_score < best_score[0]:
-            best_score = [new_score, motif_group[:]]
+            best_score = [new_score, motif_group]
         else:
             return best_score
 
-seqs = open('dataset_161_5.txt')
-seqs = seqs.readlines()
-for line in seqs:
-    line = line.rstrip()
-print(randomized_motif_search(seqs, 15, 20))
+
+
+with open('dataset_161_5.txt') as f:
+    content = f.readlines()
+seqs = [x.strip() for x in content] 
+
+
+i = 0
+
+last_motifs = (randomized_motif_search(seqs, 15, 20))
+
+while (i < 1000):
+    best_motifs = (randomized_motif_search(seqs, 15, 20))
+    if score(best_motifs[1]) < score(last_motifs[1]):
+        last_motifs = best_motifs[:]
+    i += 1
+
+for motif in last_motifs[1]:
+    print(motif)
+    print('\n')
