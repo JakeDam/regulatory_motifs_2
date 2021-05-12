@@ -1,3 +1,4 @@
+import random
 from random import randint
 
 # Calculates hamming distance between two nucleotide sequences 
@@ -57,21 +58,31 @@ def randomized_motif_search(dna, k, t):
 
 
 
+
 with open('dataset_161_5.txt') as f:
     content = f.readlines()
 seqs = [x.strip() for x in content] 
 
+#seqs = ['CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA',
+#        'GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG',
+#        'TAGTACCGAGACCGAAAGAAGTATACAGGCGT',
+#        'TAGATCAAGTTTCAGGTGCACGTCGGTGAACC',
+#        'AATCCACCAGCTCCACGTGCAATGTTGGCCTA']
 
 i = 0
 
+random.seed(2000)
+
 last_motifs = (randomized_motif_search(seqs, 15, 20))
 
-while (i < 1000):
+
+while (i < 10000):
     best_motifs = (randomized_motif_search(seqs, 15, 20))
     if score(best_motifs[1]) < score(last_motifs[1]):
         last_motifs = best_motifs[:]
     i += 1
 
+print(last_motifs[0])
 for motif in last_motifs[1]:
-    print(motif)
-    print('\n')
+    print(motif + '\n')
+#print(score(['TCTCGGGG', 'CCAAGGTG', 'TACAGGCG', 'TTCAGGTG', 'TCCACGTG']))
