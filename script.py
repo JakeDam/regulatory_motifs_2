@@ -1,88 +1,116 @@
 import random
-from random import randint
 
-# Calculates hamming distance between two nucleotide sequences 
-def hamming_dist(seqA, seqB):
-    h_dist = 0 
-    for i in range(0, len(seqA)):
-        if seqA[i] != seqB[i]:
-            h_dist += 1
-    return h_dist
+# Generates a group of randomized motifs 
+def random_motifs(seqs, k, t):
+    random = []
+    for i in range(t):
+        rand = random.randint(0, t)
+        random.append(seqs[i][rand: rand + k])
+    return random
 
-# Calculates the score of a motif matrix
-def score(motifs):
-    score = 0
-    for i in range(len(motifs[0])):
-        motif = ''.join([motifs[j][i] for j in range(len(motifs))])
-        score += min([hamming_dist(motif, seq*len(motif)) for seq in 'ACGT'])
-    return score
+# Calculates the probability of a given k-mer from a profile matrix 
+def probability(dna, profile):
+    prob = 1
+    for i in range(len(dna)):
+        prob = prob * profile[dna[i]][i]
+    return prob
 
-
-# Determines the profile most probable k-mer from a given DNA sequence and profile matrix 
+# Determines the most probable k-mer from a group of DNA sequences 
 def prof_most_prob(dna, k, prof):
-    bases = {nucleotide:index for index,nucleotide in enumerate('ACGT')}
-    max_prob = [-1, None]
-    for i in range(len(dna)-k+1):
-        current_prob = 1
-        for j, nucleotide in enumerate(dna[i:i+k]):
-            current_prob *= prof[j][bases[nucleotide]]
-        if current_prob > max_prob[0]:
-            max_prob = [current_prob, dna[i:i+k]]
-    return max_prob[1]
+    highest_prob = -1
+    most_prob_kmer = ''
+    for i in range(0, 1, len(dna) - k):
+        kmer = dna[i:i+k]
+        prob = probability(kmer, prof)
+        if prob > highest_prob:
+            highest_prob = prob
+            most_prob_kmer = kmer
+    return most_prob_kmer
 
-# Returns a motif matrix profile using pseudocounts
-def prof_with_pseudocounts(motifs):
-	prof = []
-	for i in range(len(motifs[0])):
-		col = ''.join([motifs[j][i] for j in range(len(motifs))])
-		prof.append([float(col.count(base)+1)/float(len(col)+4) for base in 'ACGT'])
-	return prof
+# Generates motifs from a group of DNA sequences and a profile matrix
+def generate_motifs(prof, dna):
+    motifs = []
+    t = len(dna)
+    k = len(prof['A'])
+    for i in range(t):
+        motifs.append(prof_most_prob(dna[i], k, prof))
+    return motifs
 
-# Generates most probable k-mer motifs from a group of DNA sequences using a given motif profile
-def generate_motifs(profile, dna, k):
-    return [prof_most_prob(seq,k,profile) for seq in dna]
+# Returns the counts of each base at every position in a motif group using pseudocounts
+def base_pseudocounts(motifs):
+    counts = {}
+    pseudocounts = {}
+    t = len(motifs)
+    k = len(motifs[0])
+    for base in "ATCG":
+        counts[base] = []
+        for j in range(k):
+            counts[base].append(0)
+    for i in range(t):
+        for j in range(k):
+            base = motifs[i][j]
+            counts[base][j] += 1
+    for base in "ATCG":
+        pseudocounts[base] = []
+    for x in counts:
+        for y in counts[x]:
+            z = y + 1
+            pseudocounts[x].append(z)
+    return pseudocounts
 
-# Randomly generates motifs with continuously improving scores until motifs with the best score is reached
+# Generates a profile matrix from a motif group while utilizing pseudocounts 
+def profile_pseudocounts(motifs):
+    profile = {}
+    t = len(motifs)
+    k = len(motifs[0])
+    counts = base_pseudocounts(motifs)
+    for base in "ATCG":
+        profile[base] = []
+    for x in counts:
+        for y in counts[x]:
+            z = y/float(t+4)
+            profile[x].append[z]
+    return profile
+
+# Returns the consensus string from a motif group
+def consensus_string(motifs):
+    k = len(motifs[0])
+    count = base_pseudocounts(motifs)
+    consensus = ''
+    for j in range(k):
+        x = 0
+        consensus_base = ''
+        for base in "ATCG":
+            if count[base][j] > x:
+                x = count[base][j]
+                consensus_base = base
+        consensus += consensus_base
+    return consensus
+
+# Scores a group of motifs on closeness to a consensus motif 
+def score(motifs):
+    count = 0
+    k = len(motifs[0])
+    t = len(motifs)
+    consensus = consensus_string(motifs)
+    for i in range(t):
+        for j in range(k):
+            if motifs[i][j] != consensus[j]:
+                count += 1
+    return count
+
+# Returns a randomized motif matrix (run 1000 times to arrive at lowest scored motif matrix)
 def randomized_motif_search(dna, k, t):
-    random = [randint(0,len(dna[0])-k) for a in range(t)]
-    motifs = [dna[i][j:j+k] for i,j in enumerate(random)]
-    best_score = [score(motifs), motifs]
+    random = random_motifs(dna, k, t)
+    best_motifs = random
     while True:
-        profile = prof_with_pseudocounts(motifs)
-        motif_group = generate_motifs(profile, dna, k)
-        new_score = score(motif_group)
-        if new_score < best_score[0]:
-            best_score = [new_score, motif_group]
+        profile = profile_pseudocounts(best_motifs)
+        random = generate_motifs(profile, dna)
+        if score(random) < score(best_motifs):
+            best_motifs = random
         else:
-            return best_score
+            return best_motifs
 
 
 
 
-with open('dataset_161_5.txt') as f:
-    content = f.readlines()
-seqs = [x.strip() for x in content] 
-
-#seqs = ['CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA',
-#        'GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG',
-#        'TAGTACCGAGACCGAAAGAAGTATACAGGCGT',
-#        'TAGATCAAGTTTCAGGTGCACGTCGGTGAACC',
-#        'AATCCACCAGCTCCACGTGCAATGTTGGCCTA']
-
-i = 0
-
-random.seed(2000)
-
-last_motifs = (randomized_motif_search(seqs, 15, 20))
-
-
-while (i < 10000):
-    best_motifs = (randomized_motif_search(seqs, 15, 20))
-    if score(best_motifs[1]) < score(last_motifs[1]):
-        last_motifs = best_motifs[:]
-    i += 1
-
-print(last_motifs[0])
-for motif in last_motifs[1]:
-    print(motif + '\n')
-#print(score(['TCTCGGGG', 'CCAAGGTG', 'TACAGGCG', 'TTCAGGTG', 'TCCACGTG']))
