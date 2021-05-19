@@ -2,11 +2,11 @@ import random
 
 # Generates a group of randomized motifs 
 def random_motifs(seqs, k, t):
-    random = []
+    randoms = []
     for i in range(t):
         rand = random.randint(0, t)
-        random.append(seqs[i][rand: rand + k])
-    return random
+        randoms.append(seqs[i][rand: rand + k])
+    return randoms
 
 # Calculates the probability of a given k-mer from a profile matrix 
 def probability(dna, profile):
@@ -62,14 +62,13 @@ def base_pseudocounts(motifs):
 def profile_pseudocounts(motifs):
     profile = {}
     t = len(motifs)
-    k = len(motifs[0])
     counts = base_pseudocounts(motifs)
     for base in "ATCG":
         profile[base] = []
     for x in counts:
         for y in counts[x]:
             z = y/float(t+4)
-            profile[x].append[z]
+            profile[x].append(z)
     return profile
 
 # Returns the consensus string from a motif group
@@ -111,6 +110,43 @@ def randomized_motif_search(dna, k, t):
         else:
             return best_motifs
 
+# Returns a motif matrix using Gibbs Sampling 
+def gibbs_sampler(dna,k,t,N):
+    motifs = random_motifs(dna, k, t)
+    best_motifs = motifs
+    for i in range(N):
+        i = random.choice(range(t))
+        del motifs[i]
+        profile = profile_pseudocounts(motifs)
+        motifs.insert(i,prof_most_prob(dna[i],k,profile))
+        if score(motifs) < score(best_motifs):
+            best_motifs = motifs[:]
+    return best_motifs
 
 
+
+
+random.seed(0)
+k = 15
+t = 20
+N = 2000
+filename = 'dataset_163_4.txt'
+with open(filename, "r") as dataset:
+    dna = []
+    for line in dataset:
+        dna.append(line.strip())
+    Text = dna[0]
+
+randomized_motif_search(dna, k, t)
+M = randomized_motif_search(dna, k, t)
+bMotifs = M
+
+for i in range(N+1):
+    M = randomized_motif_search(dna, k, t)
+    if score(M) < score(bMotifs):
+         bMotifs = M
+    else:
+        bestMotifs = bMotifs[:]
+print(score(bestMotifs))
+print ('\n'.join(bestMotifs))
 
